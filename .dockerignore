@@ -1,0 +1,14 @@
+.git
+.gitignore
+docs
+var
+vendor
+.env.local
+.env.*.local
+.php-cs-fixer.cache
+.phpunit.cache
+.idea
+.vscode
+Dockerfile
+compose*.yaml
+Makefile

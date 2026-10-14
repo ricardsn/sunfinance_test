@@ -1,0 +1,61 @@
+
+services:
+###> doctrine/doctrine-bundle ###
+  database:
+    image: postgres:${POSTGRES_VERSION:-16}-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      # You should definitely change the password in production
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB:-app}", "-U", "${POSTGRES_USER:-app}"]
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    volumes:
+      - database_data:/var/lib/postgresql/data:rw
+      # You may use a bind-mounted host directory instead, so that it is harder to accidentally remove the volume and lose all your data!
+      # - ./docker/db/data:/var/lib/postgresql/data:rw
+###< doctrine/doctrine-bundle ###
+
+  php:
+    build:
+      context: .
+      target: app
+    depends_on:
+      database:
+        condition: service_healthy
+    user: "1000:1000"
+
+  nginx:
+    image: nginx:1.30-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./public:/app/public:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - php
+
+  worker:
+    build:
+      context: .
+      target: app
+    command: php bin/console messenger:consume async --time-limit=3600
+    environment:
+      RUN_MIGRATIONS: "0"
+    depends_on:
+      database:
+        condition: service_healthy
+      php:
+        condition: service_started
+    # TODO Task 4: the "async" transport does not exist yet, so the worker exits
+    # on start. Re-enable the restart policy once messenger.yaml defines it.
+    # restart: unless-stopped
+    user: "1000:1000"
+
+volumes:
+###> doctrine/doctrine-bundle ###
+  database_data:
+###< doctrine/doctrine-bundle ###

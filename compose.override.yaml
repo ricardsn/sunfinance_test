@@ -1,0 +1,37 @@
+
+services:
+###> doctrine/doctrine-bundle ###
+  database:
+    ports:
+      - "5432"
+###< doctrine/doctrine-bundle ###
+
+  php:
+    build:
+      target: dev
+    volumes:
+      - .:/app
+      # keep the image's vendor/ visible through the bind mount, so a fresh
+      # clone (no host vendor/) still boots
+      - /app/vendor
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      APP_ENV: dev
+      XDEBUG_MODE: "${XDEBUG_MODE:-debug,develop}"
+      PHP_IDE_CONFIG: "serverName=sunfinance"
+
+  worker:
+    build:
+      target: dev
+    volumes:
+      - .:/app
+      # keep the image's vendor/ visible through the bind mount, so a fresh
+      # clone (no host vendor/) still boots
+      - /app/vendor
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      APP_ENV: dev
+      XDEBUG_MODE: "${XDEBUG_MODE:-debug,develop}"
+      PHP_IDE_CONFIG: "serverName=sunfinance"
