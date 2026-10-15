@@ -50,9 +50,9 @@ services:
         condition: service_healthy
       php:
         condition: service_started
-    # TODO Task 4: the "async" transport does not exist yet, so the worker exits
-    # on start. Re-enable the restart policy once messenger.yaml defines it.
-    # restart: unless-stopped
+    # --time-limit makes the worker exit every hour on purpose (fresh process,
+    # no leaked memory); the restart policy brings it straight back.
+    restart: unless-stopped
     user: "1000:1000"
 
 volumes:

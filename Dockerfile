@@ -1,8 +1,3 @@
-FROM composer:2 AS vendor
-WORKDIR /app
-COPY composer.json composer.lock symfony.lock ./
-RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
-
 FROM php:8.4-fpm-alpine AS app
 RUN apk add --no-cache postgresql-dev postgresql-client icu-dev \
  && apk add --no-cache --virtual .build $PHPIZE_DEPS linux-headers \
@@ -11,7 +6,10 @@ RUN apk add --no-cache postgresql-dev postgresql-client icu-dev \
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/zz-app.ini
 WORKDIR /app
-COPY --from=vendor /app/vendor ./vendor
+# deps are installed by the same PHP that runs them, so composer sees the real
+# extensions. manifest first, so a source change does not re-resolve them.
+COPY composer.json composer.lock symfony.lock ./
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
 COPY . .
 RUN composer dump-autoload --optimize --classmap-authoritative --no-dev
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint
