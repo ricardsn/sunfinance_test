@@ -12,6 +12,8 @@ $finder = (new PhpCsFixer\Finder())
 return (new PhpCsFixer\Config())
     ->setRules([
         '@Symfony' => true,
+        // @Symfony prefers ++$i; this project writes $i++
+        'increment_style' => ['style' => 'post'],
     ])
     ->setFinder($finder)
 ;

@@ -21,3 +21,18 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+
+when@test:
+    services:
+        _defaults:
+            autowire: true
+            autoconfigure: true
+
+        # Symfony's error listener logs every uncaught exception to stderr, which makes
+        # the tests that assert a 4xx/5xx response look like failures
+        logger:
+            class: Psr\Log\NullLogger
+
+        # the failing message handler the retry / dead-letter test consumes
+        App\Tests\Fixture\:
+            resource: '../tests/Fixture/'

@@ -6,15 +6,11 @@ namespace App\Tests\Integration\Handler;
 
 use App\Enum\EventStatus;
 use App\Exception\DuplicateEventException;
-use App\Factory\ProcessedEventFactory;
 use App\Factory\RecordEventRequestFactory;
 use App\Handler\EventProcessor;
 use App\Model\RecordEventRequest;
 use Doctrine\DBAL\Connection;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /**
  * The transport is sync:// in tests, so dispatching runs the handler inline and one
@@ -32,14 +28,8 @@ final class EventProcessorTest extends KernelTestCase
 
         $this->connection = $container->get(Connection::class);
 
-        // built by hand: nothing injects them until the controller arrives, so the
-        // compiler drops them from the container
-        $this->processor = new EventProcessor(
-            $container->get(EntityManagerInterface::class),
-            $container->get(MessageBusInterface::class),
-            new ProcessedEventFactory(),
-        );
-        $this->requests = new RecordEventRequestFactory($container->get(ValidatorInterface::class));
+        $this->processor = $container->get(EventProcessor::class);
+        $this->requests = $container->get(RecordEventRequestFactory::class);
     }
 
     public function testItStoresTheEventAndPostsTheLedgerPair(): void

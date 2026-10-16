@@ -2,6 +2,13 @@ framework:
     messenger:
         failure_transport: failed
 
+        # JSON instead of PHP's serialize(): the body is then the message itself and the
+        # stamps sit in the headers, so a queued row can be read in psql. The class name
+        # becomes part of the stored format - renaming a message class breaks the rows
+        # already in the queue.
+        serializer:
+            default_serializer: messenger.transport.symfony_serializer
+
         transports:
             # doctrine://default - the queue table lives in the app database, so an
             # event and its job are committed together. The transport creates
@@ -16,5 +23,33 @@ framework:
             # dead letter: nothing consumes this, messages wait here for a human
             failed: 'doctrine://default?queue_name=failed'
 
+            # diagnostics only, consumed by app:demo-retry and by nothing else, so a
+            # probe never competes with real events. The short check_delayed_interval
+            # makes the retries land in seconds instead of waiting for the 60s scan.
+            probe:
+                dsn: 'doctrine://default?queue_name=probe&check_delayed_interval=100'
+                retry_strategy:
+                    max_retries: 3
+                    delay: 1000
+                    multiplier: 2
+
         routing:
             App\Message\ProcessFinancialEvent: async
+            App\Message\FailingProbe: probe
+
+when@test:
+    framework:
+        messenger:
+            transports:
+                # a real queue for the retry / dead-letter test: the default async
+                # transport is sync:// in tests, which never retries. delay: 0 keeps the
+                # test off the 1s/2s/4s backoff, and use_notify: false stops the Postgres
+                # transport from waiting on a LISTEN - the notification sits in the
+                # test's own uncommitted transaction and would never arrive.
+                queue_test:
+                    dsn: 'doctrine://default?queue_name=queue_test'
+                    options:
+                        use_notify: false
+                    retry_strategy:
+                        max_retries: 3
+                        delay: 0
