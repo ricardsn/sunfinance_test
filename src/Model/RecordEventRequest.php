@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Dto;
+namespace App\Model;
 
 use App\Enum\EventType;
-use App\Money\DecimalAmount;
+use App\Helper\DecimalAmount;
 use Symfony\Component\Intl\Currencies;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;

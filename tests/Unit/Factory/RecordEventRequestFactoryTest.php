@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Dto;
+namespace App\Tests\Unit\Factory;
 
-use App\Dto\RecordEventRequestFactory;
 use App\Enum\EventType;
 use App\Exception\InvalidJsonException;
 use App\Exception\ValidationFailedException;
+use App\Factory\RecordEventRequestFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Validator\Validation;
@@ -25,7 +25,7 @@ final class RecordEventRequestFactoryTest extends TestCase
 
     public function testValidPayload(): void
     {
-        $request = $this->factory->fromJson(self::json());
+        $request = $this->factory->create(self::json());
 
         self::assertSame('evt_123', $request->eventId());
         self::assertSame(EventType::PaymentReceived, $request->type());
@@ -38,7 +38,7 @@ final class RecordEventRequestFactoryTest extends TestCase
     #[DataProvider('amounts')]
     public function testAmountIsConvertedToMinorUnits(array $overrides, int $expected): void
     {
-        self::assertSame($expected, $this->factory->fromJson(self::json($overrides))->amountInMinorUnits());
+        self::assertSame($expected, $this->factory->create(self::json($overrides))->amountInMinorUnits());
     }
 
     /** @return iterable<string, array{array<string, mixed>, int}> */
@@ -58,7 +58,7 @@ final class RecordEventRequestFactoryTest extends TestCase
     {
         $this->expectException(InvalidJsonException::class);
 
-        $this->factory->fromJson($body);
+        $this->factory->create($body);
     }
 
     /** @return iterable<string, array{string}> */
@@ -83,7 +83,7 @@ final class RecordEventRequestFactoryTest extends TestCase
     public function testInvalidFieldIsRejected(array $overrides, string $expectedField): void
     {
         try {
-            $this->factory->fromJson(self::json($overrides));
+            $this->factory->create(self::json($overrides));
             self::fail('Expected the payload to be rejected.');
         } catch (ValidationFailedException $e) {
             self::assertSame([$expectedField], array_keys($e->getErrors()));
@@ -138,7 +138,7 @@ final class RecordEventRequestFactoryTest extends TestCase
     public function testEveryInvalidFieldIsReported(): void
     {
         try {
-            $this->factory->fromJson('{}');
+            $this->factory->create('{}');
             self::fail('Expected the payload to be rejected.');
         } catch (ValidationFailedException $e) {
             self::assertSame(
@@ -151,7 +151,7 @@ final class RecordEventRequestFactoryTest extends TestCase
     #[DataProvider('acceptedTimestamps')]
     public function testTimestampIsParsed(string $timestamp, string $expected): void
     {
-        $request = $this->factory->fromJson(self::json(['timestamp' => $timestamp]));
+        $request = $this->factory->create(self::json(['timestamp' => $timestamp]));
 
         self::assertSame($expected, $request->occurredAt()->format(\DATE_ATOM));
     }

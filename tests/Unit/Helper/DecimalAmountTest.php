@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Money;
+namespace App\Tests\Unit\Helper;
 
-use App\Money\DecimalAmount;
+use App\Helper\DecimalAmount;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Money;
+namespace App\Helper;
 
 /**
  * A money amount as it arrived in the request, kept as a decimal string.

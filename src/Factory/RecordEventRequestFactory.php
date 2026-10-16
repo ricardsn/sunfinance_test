@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Dto;
+namespace App\Factory;
 
 use App\Exception\InvalidJsonException;
 use App\Exception\ValidationFailedException;
+use App\Model\RecordEventRequest;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /** Turns a raw request body into a validated RecordEventRequest. */
@@ -18,7 +19,7 @@ final class RecordEventRequestFactory
     {
     }
 
-    public function fromJson(string $body): RecordEventRequest
+    public function create(string $body): RecordEventRequest
     {
         try {
             $decoded = json_decode($body, false, flags: \JSON_THROW_ON_ERROR);

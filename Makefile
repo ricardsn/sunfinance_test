@@ -17,7 +17,10 @@ logs:
 	$(DC) logs -f php worker
 migrate:
 	$(PHP) bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+# the integration tests need the app_test schema, so bring it up to date first
 test:
+	$(PHP) bin/console --env=test doctrine:database:create --if-not-exists -q
+	$(PHP) bin/console --env=test doctrine:migrations:migrate --no-interaction --allow-no-migration -q
 	$(PHP) vendor/bin/phpunit
 stan:
 	$(PHP) vendor/bin/phpstan analyse -c phpstan.dist.neon
