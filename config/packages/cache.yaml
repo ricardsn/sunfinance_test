@@ -15,5 +15,20 @@ framework:
         #app: cache.adapter.apcu
 
         # Namespaced pools use the above "app" backend by default
-        #pools:
-            #my.dedicated.cache: null
+        pools:
+            # account balances, invalidated by the worker after it posts a pair.
+            # the entry's own lifetime is set in AccountBalanceCache.
+            cache.balance:
+                adapter: cache.adapter.redis
+                provider: '%env(REDIS_URL)%'
+
+when@test:
+    framework:
+        cache:
+            pools:
+                # in-memory, so the suite needs no Redis. the provider has to be
+                # unset as well: pool config merges, and the array adapter would be
+                # handed the Redis client as its first constructor argument
+                cache.balance:
+                    adapter: cache.adapter.array
+                    provider: null

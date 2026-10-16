@@ -55,6 +55,21 @@ final class AccountBalanceControllerTest extends ApiTestCase
         );
     }
 
+    /**
+     * The balance is cached, so posting has to clear it - otherwise the second read
+     * would still answer with the first total.
+     */
+    public function testANewEventIsVisibleInTheBalanceItAffects(): void
+    {
+        $this->postEvent('evt_bal_8', 'fee_charged');
+
+        self::assertSame('-100.50', $this->getJson('/accounts/fee_account/balance')['balances'][0]['balance']);
+
+        $this->postEvent('evt_bal_9', 'fee_charged');
+
+        self::assertSame('-201.00', $this->getJson('/accounts/fee_account/balance')['balances'][0]['balance']);
+    }
+
     public function testAnUnknownAccountAnswersWith404(): void
     {
         $problem = $this->getJson('/accounts/savings_account/balance', Response::HTTP_NOT_FOUND);

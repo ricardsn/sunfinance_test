@@ -19,12 +19,24 @@ services:
       # - ./docker/db/data:/var/lib/postgresql/data:rw
 ###< doctrine/doctrine-bundle ###
 
+  redis:
+    image: redis:8-alpine
+    # the cache is rebuildable from the ledger, so persistence is off on purpose
+    command: redis-server --save "" --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   php:
     build:
       context: .
       target: app
     depends_on:
       database:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     user: "1000:1000"
 
@@ -47,6 +59,8 @@ services:
       RUN_MIGRATIONS: "0"
     depends_on:
       database:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       php:
         condition: service_started

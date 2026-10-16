@@ -39,7 +39,7 @@ final class ProcessFinancialEventHandlerTest extends KernelTestCase
         $eventId = 'evt_handler_'.$type->value;
         $this->storePendingEvent($eventId, $type);
 
-        ($this->handler)(new ProcessFinancialEvent($eventId));
+        $this->handler->post(new ProcessFinancialEvent($eventId));
 
         $rows = $this->connection->fetchAllAssociative(
             'SELECT account, amount, currency, direction FROM transactions WHERE event_id = ? ORDER BY id',
@@ -86,8 +86,8 @@ final class ProcessFinancialEventHandlerTest extends KernelTestCase
     {
         $this->storePendingEvent('evt_handler_replay', EventType::FeeCharged);
 
-        ($this->handler)(new ProcessFinancialEvent('evt_handler_replay'));
-        ($this->handler)(new ProcessFinancialEvent('evt_handler_replay'));
+        $this->handler->post(new ProcessFinancialEvent('evt_handler_replay'));
+        $this->handler->post(new ProcessFinancialEvent('evt_handler_replay'));
 
         self::assertSame(2, (int) $this->connection->fetchOne(
             'SELECT COUNT(*) FROM transactions WHERE event_id = ?',
@@ -99,7 +99,7 @@ final class ProcessFinancialEventHandlerTest extends KernelTestCase
     {
         $this->expectException(UnrecoverableMessageHandlingException::class);
 
-        ($this->handler)(new ProcessFinancialEvent('evt_handler_missing'));
+        $this->handler->post(new ProcessFinancialEvent('evt_handler_missing'));
     }
 
     private function storePendingEvent(string $eventId, EventType $type): void
