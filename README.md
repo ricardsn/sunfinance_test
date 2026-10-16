@@ -27,7 +27,8 @@ PHPStan, php-cs-fixer.
 
 ## Quick start
 
-Everything runs in Docker. You need Docker with the Compose plugin, and nothing else.
+Everything runs in Docker. You need Docker with Compose - the `docker compose` plugin or
+the older standalone `docker-compose`, whichever you have - and nothing else.
 
 ```bash
 make up

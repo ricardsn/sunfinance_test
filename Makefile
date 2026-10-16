@@ -1,5 +1,12 @@
-DC = docker-compose
+# the Compose plugin ("docker compose") where it exists, the standalone v1
+# binary otherwise
+DC := $(shell docker compose version >/dev/null 2>&1 && echo docker compose || echo docker-compose)
 PHP = $(DC) exec php
+
+# the php and worker containers run as the host user, so files they write
+# through the bind mount (var/, migrations) stay writable on the host
+export UID := $(shell id -u)
+export GID := $(shell id -g)
 
 .PHONY: up down build test stan migrate consume shell logs
 
