@@ -23,19 +23,8 @@ framework:
             # dead letter: nothing consumes this, messages wait here for a human
             failed: 'doctrine://default?queue_name=failed'
 
-            # diagnostics only, consumed by app:demo-retry and by nothing else, so a
-            # probe never competes with real events. The short check_delayed_interval
-            # makes the retries land in seconds instead of waiting for the 60s scan.
-            probe:
-                dsn: 'doctrine://default?queue_name=probe&check_delayed_interval=100'
-                retry_strategy:
-                    max_retries: 3
-                    delay: 1000
-                    multiplier: 2
-
         routing:
             App\Message\ProcessFinancialEvent: async
-            App\Message\FailingProbe: probe
 
 when@test:
     framework:

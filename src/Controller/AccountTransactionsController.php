@@ -16,12 +16,12 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[AsController]
-final class AccountTransactionsController
+final readonly class AccountTransactionsController
 {
     public function __construct(
-        private readonly AccountingTransactionRepository $transactions,
-        private readonly PaginationFactory $pagination,
-        private readonly MoneyFormatter $money,
+        private AccountingTransactionRepository $transactions,
+        private PaginationFactory $pagination,
+        private MoneyFormatter $money,
     ) {
     }
 

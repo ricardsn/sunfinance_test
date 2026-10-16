@@ -15,14 +15,14 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\Exception\UnrecoverableMessageHandlingException;
 
 /** Writes the ledger pair for a stored event. Safe to run more than once. */
-final class ProcessFinancialEventHandler
+final readonly class ProcessFinancialEventHandler
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
-        private readonly ProcessedEventRepository $events,
-        private readonly AccountingTransactionFactory $transactions,
-        private readonly AccountBalanceCache $balances,
-        private readonly ClockInterface $clock,
+        private EntityManagerInterface $entityManager,
+        private ProcessedEventRepository $events,
+        private AccountingTransactionFactory $transactions,
+        private AccountBalanceCache $balances,
+        private ClockInterface $clock,
     ) {
     }
 

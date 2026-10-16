@@ -6,7 +6,6 @@ namespace App\Controller;
 
 use App\Factory\RecordEventRequestFactory;
 use App\Handler\EventProcessor;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\AsController;
@@ -14,11 +13,11 @@ use Symfony\Component\HttpKernel\Exception\UnsupportedMediaTypeHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[AsController]
-final class RecordEventController extends AbstractController
+final readonly class RecordEventController
 {
     public function __construct(
-        private readonly RecordEventRequestFactory $requests,
-        private readonly EventProcessor $processor,
+        private RecordEventRequestFactory $requests,
+        private EventProcessor $processor,
     ) {
     }
 

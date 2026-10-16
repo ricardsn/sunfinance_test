@@ -25,39 +25,21 @@ class AccountingTransaction
     #[ORM\Column(type: Types::BIGINT)]
     private ?int $id = null;
 
-    #[ORM\Column(length: 128)]
-    private readonly string $eventId;
-
-    #[ORM\Column(length: 32, enumType: AccountName::class)]
-    private readonly AccountName $account;
-
-    /** Minor units (cents), always positive - the direction carries the sign. */
-    #[ORM\Column(type: Types::BIGINT)]
-    private readonly int $amount;
-
-    #[ORM\Column(length: 3)]
-    private readonly string $currency;
-
-    #[ORM\Column(length: 6, enumType: Direction::class)]
-    private readonly Direction $direction;
-
-    #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE)]
-    private readonly \DateTimeImmutable $createdAt;
-
     public function __construct(
-        string $eventId,
-        AccountName $account,
-        int $amount,
-        string $currency,
-        Direction $direction,
-        \DateTimeImmutable $createdAt,
+        #[ORM\Column(length: 128)]
+        private readonly string $eventId,
+        #[ORM\Column(length: 32, enumType: AccountName::class)]
+        private readonly AccountName $account,
+        /** Minor units (cents), always positive - the direction carries the sign. */
+        #[ORM\Column(type: Types::BIGINT)]
+        private readonly int $amount,
+        #[ORM\Column(length: 3)]
+        private readonly string $currency,
+        #[ORM\Column(length: 6, enumType: Direction::class)]
+        private readonly Direction $direction,
+        #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE)]
+        private readonly \DateTimeImmutable $createdAt,
     ) {
-        $this->eventId = $eventId;
-        $this->account = $account;
-        $this->amount = $amount;
-        $this->currency = $currency;
-        $this->direction = $direction;
-        $this->createdAt = $createdAt;
     }
 
     public function getId(): ?int

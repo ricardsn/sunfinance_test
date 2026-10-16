@@ -1,0 +1,452 @@
+openapi: 3.1.0
+info:
+  title: Financial event ledger API
+  version: 1.0.0
+  description: |
+    Accepts financial events, stores each one exactly once, and writes the matching
+    double-entry pair into a ledger.
+
+    `POST /events` validates the payload, stores the event and queues a job, then answers
+    202 with an empty body. A worker writes the debit/credit pair. The two read endpoints
+    serve an account's balance and its transactions.
+
+    Amounts are sent and returned as decimals with the currency's own number of decimals
+    (EUR `100.50`, JPY `100`) and stored as `BIGINT` minor units. Errors are RFC 7807
+    problem documents sent as `application/problem+json`.
+
+servers:
+  - url: http://localhost:8080
+    description: the Docker stack
+
+tags:
+  - name: Events
+  - name: Accounts
+
+paths:
+  /events:
+    post:
+      tags: [Events]
+      summary: Record a financial event
+      description: |
+        Stores the event and queues it for posting. The ledger pair is written by the
+        worker, so the response is 202 with an empty body rather than 200 or 204.
+
+        `event_id` is the idempotency key: it is UNIQUE in the database, so a repeat is a
+        409 and never creates a second pair.
+      operationId: recordEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordEventRequest'
+            examples:
+              payment_received:
+                summary: payment_received - debit user_account, credit system_cash_account
+                value:
+                  event_id: evt_1001
+                  type: payment_received
+                  amount: 100.00
+                  currency: EUR
+                  timestamp: '2026-01-01T10:00:00Z'
+              payment_sent:
+                summary: payment_sent - debit system_cash_account, credit user_account
+                value:
+                  event_id: evt_1002
+                  type: payment_sent
+                  amount: 40.50
+                  currency: EUR
+                  timestamp: '2026-01-01T11:00:00Z'
+              fee_charged:
+                summary: fee_charged - debit user_account, credit fee_account
+                value:
+                  event_id: evt_1003
+                  type: fee_charged
+                  amount: 2.50
+                  currency: EUR
+                  timestamp: '2026-01-01T12:00:00Z'
+              amount_as_string:
+                summary: amount may also be sent as a decimal string
+                value:
+                  event_id: evt_1004
+                  type: payment_received
+                  amount: '100.00'
+                  currency: EUR
+                  timestamp: '2026-01-01T13:00:00Z'
+      responses:
+        '202':
+          description: Accepted - the event is stored and queued. Empty body.
+        '400':
+          description: The request body is not valid JSON.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: about:blank
+                title: Bad Request
+                status: 400
+                detail: The request body is not valid JSON.
+        '409':
+          description: An event with this `event_id` has already been processed.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: about:blank
+                title: Conflict
+                status: 409
+                detail: Event "evt_1001" has already been processed.
+        '415':
+          description: The `Content-Type` is not JSON.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: about:blank
+                title: Unsupported Media Type
+                status: 415
+                detail: The request body must be sent as application/json.
+        '422':
+          description: A field is missing or invalid. Every invalid field is reported.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ValidationProblem'
+              examples:
+                invalid_fields:
+                  summary: several invalid fields
+                  value:
+                    type: about:blank
+                    title: Unprocessable Content
+                    status: 422
+                    detail: The request payload is invalid.
+                    errors:
+                      event_id: ['This value should not be blank.']
+                      amount: ['This value should be greater than zero.']
+                      currency: ['This value should have exactly 3 characters.']
+                      timestamp: ['This value is not a valid ISO-8601 date and time.']
+                unknown_type:
+                  summary: unknown event type
+                  value:
+                    type: about:blank
+                    title: Unprocessable Content
+                    status: 422
+                    detail: The request payload is invalid.
+                    errors:
+                      type: ['This value is not a supported event type.']
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /accounts/{id}/balance:
+    get:
+      tags: [Accounts]
+      summary: Account balance per currency
+      description: |
+        Debit total, credit total and the balance (debit minus credit) for each currency
+        the account has rows in. An account that has never been posted to answers 200 with
+        an empty `balances` list; only a name that is not an account is a 404.
+
+        Served through a Redis cache that the worker invalidates when it posts to the
+        account. A Redis outage degrades to an uncached read, not an error.
+      operationId: accountBalance
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        '200':
+          description: The account's balances.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountBalanceResponse'
+              examples:
+                posted:
+                  summary: after the three example events
+                  value:
+                    account: user_account
+                    balances:
+                      - currency: EUR
+                        debit_total: '102.50'
+                        credit_total: '40.50'
+                        balance: '62.00'
+                untouched:
+                  summary: a real account with no rows yet
+                  value:
+                    account: fee_account
+                    balances: []
+        '404':
+          $ref: '#/components/responses/UnknownAccount'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /accounts/{id}/transactions:
+    get:
+      tags: [Accounts]
+      summary: Account transactions, newest first
+      description: |
+        The account's ledger rows ordered by id descending, which is posting order.
+        A `limit` outside 1..200, or a `limit`/`offset` that is not a whole number, is a
+        422 rather than a quietly clamped value.
+      operationId: accountTransactions
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+        - name: limit
+          in: query
+          required: false
+          description: How many rows to return.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          description: How many rows to skip.
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: One page of the account's transactions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountTransactionsResponse'
+              example:
+                account: user_account
+                limit: 2
+                offset: 0
+                transactions:
+                  - id: 5
+                    event_id: evt_1003
+                    amount: '2.50'
+                    currency: EUR
+                    direction: debit
+                    created_at: '2026-10-16T15:35:28+00:00'
+                  - id: 4
+                    event_id: evt_1002
+                    amount: '40.50'
+                    currency: EUR
+                    direction: credit
+                    created_at: '2026-10-16T15:35:28+00:00'
+        '404':
+          $ref: '#/components/responses/UnknownAccount'
+        '422':
+          description: Invalid pagination.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ValidationProblem'
+              example:
+                type: about:blank
+                title: Unprocessable Content
+                status: 422
+                detail: The request payload is invalid.
+                errors:
+                  limit: ['This value should be between 1 and 200.']
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  parameters:
+    AccountId:
+      name: id
+      in: path
+      required: true
+      description: |
+        The ledger account name. These are three fixed accounts, not rows with ids, so
+        there is no `accounts` table and anything else is a 404.
+      schema:
+        $ref: '#/components/schemas/AccountName'
+
+  responses:
+    UnknownAccount:
+      description: The name is not one of the three ledger accounts.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            detail: Unknown account "nope".
+    InternalError:
+      description: |
+        An unexpected failure. The detail is fixed, so nothing internal leaks; the
+        exception goes to the log.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: about:blank
+            title: Internal Server Error
+            status: 500
+            detail: An unexpected error occurred.
+
+  schemas:
+    EventType:
+      type: string
+      description: |
+        The supported event types, each with its own debit/credit pair:
+        `payment_received` debits `user_account` and credits `system_cash_account`,
+        `payment_sent` is the reverse, and `fee_charged` debits `user_account` and
+        credits `fee_account`.
+      enum: [payment_received, payment_sent, fee_charged]
+
+    AccountName:
+      type: string
+      enum: [user_account, system_cash_account, fee_account]
+
+    Direction:
+      type: string
+      enum: [debit, credit]
+
+    RecordEventRequest:
+      type: object
+      required: [event_id, type, amount, currency, timestamp]
+      properties:
+        event_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: The idempotency key, supplied by the caller. UNIQUE in the database.
+          examples: [evt_1001]
+        type:
+          $ref: '#/components/schemas/EventType'
+        amount:
+          description: |
+            Greater than zero, with no more decimals than the currency allows (EUR 2,
+            JPY 0, KWD 3). Accepted as a JSON number or as a decimal string; converted to
+            minor units without float arithmetic.
+          oneOf:
+            - type: number
+              exclusiveMinimum: 0
+            - type: string
+              pattern: '^\d+(\.\d+)?$'
+          examples: [100.00]
+        currency:
+          type: string
+          description: An ISO 4217 code, uppercase. Not normalised - lowercase is a 422.
+          pattern: '^[A-Z]{3}$'
+          examples: [EUR]
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO-8601 with a timezone. When the event happened, per the caller.
+          examples: ['2026-01-01T10:00:00Z']
+
+    AccountBalanceResponse:
+      type: object
+      required: [account, balances]
+      properties:
+        account:
+          $ref: '#/components/schemas/AccountName'
+        balances:
+          type: array
+          description: One entry per currency the account has rows in. Empty if it has none.
+          items:
+            $ref: '#/components/schemas/CurrencyBalance'
+
+    CurrencyBalance:
+      type: object
+      required: [currency, debit_total, credit_total, balance]
+      properties:
+        currency:
+          type: string
+          examples: [EUR]
+        debit_total:
+          type: string
+          description: Sum of the debit rows, as a decimal string.
+          examples: ['102.50']
+        credit_total:
+          type: string
+          description: Sum of the credit rows, as a decimal string.
+          examples: ['40.50']
+        balance:
+          type: string
+          description: Debit minus credit, so the sign says which side the account is on.
+          examples: ['62.00']
+
+    AccountTransactionsResponse:
+      type: object
+      required: [account, limit, offset, transactions]
+      properties:
+        account:
+          $ref: '#/components/schemas/AccountName'
+        limit:
+          type: integer
+          examples: [2]
+        offset:
+          type: integer
+          examples: [0]
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+
+    Transaction:
+      type: object
+      description: One ledger row. Insert-only - rows are never updated or deleted.
+      required: [id, event_id, amount, currency, direction, created_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Ascending id, which is also the posting order.
+          examples: [5]
+        event_id:
+          type: string
+          description: The event that produced this row.
+          examples: [evt_1003]
+        amount:
+          type: string
+          description: Always positive, as a decimal string - `direction` carries the sign.
+          examples: ['2.50']
+        currency:
+          type: string
+          examples: [EUR]
+        direction:
+          $ref: '#/components/schemas/Direction'
+        created_at:
+          type: string
+          format: date-time
+          examples: ['2026-10-16T15:35:28+00:00']
+
+    Problem:
+      type: object
+      description: An RFC 7807 problem document, sent as `application/problem+json`.
+      required: [type, title, status, detail]
+      properties:
+        type:
+          type: string
+          examples: ['about:blank']
+        title:
+          type: string
+          description: The HTTP reason phrase for the status.
+          examples: [Conflict]
+        status:
+          type: integer
+          examples: [409]
+        detail:
+          type: string
+          examples: ['Event "evt_1001" has already been processed.']
+
+    ValidationProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          required: [errors]
+          properties:
+            errors:
+              type: object
+              description: The failed fields, keyed by the JSON field name.
+              additionalProperties:
+                type: array
+                items:
+                  type: string

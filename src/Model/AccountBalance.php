@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Model;
 
 /** One currency's totals for one account, in minor units. */
-final class AccountBalance
+final readonly class AccountBalance
 {
     public function __construct(
-        public readonly string $currency,
-        public readonly int $debitTotal,
-        public readonly int $creditTotal,
+        public string $currency,
+        public int $debitTotal,
+        public int $creditTotal,
     ) {
     }
 

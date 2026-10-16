@@ -10,12 +10,12 @@ use App\Model\RecordEventRequest;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /** Turns a raw request body into a validated RecordEventRequest. */
-final class RecordEventRequestFactory
+final readonly class RecordEventRequestFactory
 {
     /** Property paths whose JSON field name differs. */
     private const JSON_NAMES = ['eventId' => 'event_id'];
 
-    public function __construct(private readonly ValidatorInterface $validator)
+    public function __construct(private ValidatorInterface $validator)
     {
     }
 

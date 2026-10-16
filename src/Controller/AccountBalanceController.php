@@ -14,11 +14,11 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[AsController]
-final class AccountBalanceController
+final readonly class AccountBalanceController
 {
     public function __construct(
-        private readonly AccountBalanceCache $balances,
-        private readonly MoneyFormatter $money,
+        private AccountBalanceCache $balances,
+        private MoneyFormatter $money,
     ) {
     }
 

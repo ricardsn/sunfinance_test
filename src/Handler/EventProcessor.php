@@ -17,12 +17,12 @@ use Symfony\Component\Messenger\MessageBusInterface;
  * the queue table lives in the same database, so the event and its job commit together
  * and neither can exist without the other.
  */
-final class EventProcessor
+final readonly class EventProcessor
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
-        private readonly MessageBusInterface $bus,
-        private readonly ProcessedEventFactory $events,
+        private EntityManagerInterface $entityManager,
+        private MessageBusInterface $bus,
+        private ProcessedEventFactory $events,
     ) {
     }
 

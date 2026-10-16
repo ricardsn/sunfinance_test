@@ -17,7 +17,7 @@ use Symfony\Contracts\Cache\ItemInterface;
  * with the size of the ledger. A Redis failure is not an error here: Symfony's adapter
  * logs it and reports a miss, so the read falls through to Postgres.
  */
-final class AccountBalanceCache
+final readonly class AccountBalanceCache
 {
     /**
      * Only a safety net. Posting clears the entry, so this just means that an
@@ -27,9 +27,9 @@ final class AccountBalanceCache
 
     public function __construct(
         #[Autowire(service: 'cache.balance')]
-        private readonly CacheInterface $cache,
-        private readonly AccountingTransactionRepository $transactions,
-        private readonly AccountBalanceFactory $balances,
+        private CacheInterface $cache,
+        private AccountingTransactionRepository $transactions,
+        private AccountBalanceFactory $balances,
     ) {
     }
 

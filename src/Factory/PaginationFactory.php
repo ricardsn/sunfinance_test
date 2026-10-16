@@ -12,7 +12,7 @@ use App\Model\Pagination;
  * a whole number, or a limit outside 1..MAX_LIMIT, is reported as a validation error
  * rather than quietly clamped - a caller asking for 5000 rows should hear about the cap.
  */
-final class PaginationFactory
+final readonly class PaginationFactory
 {
     public function create(mixed $limit, mixed $offset): Pagination
     {

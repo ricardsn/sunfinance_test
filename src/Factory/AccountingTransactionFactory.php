@@ -10,7 +10,7 @@ use App\Enum\AccountName;
 use App\Enum\Direction;
 
 /** Builds the double-entry pair for an event: same amount, one debit and one credit. */
-final class AccountingTransactionFactory
+final readonly class AccountingTransactionFactory
 {
     /** @return list<AccountingTransaction> */
     public function createPair(ProcessedEvent $event, \DateTimeImmutable $at): array

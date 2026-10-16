@@ -7,7 +7,7 @@ namespace App\Factory;
 use App\Model\AccountBalance;
 
 /** Turns the repository's per-currency sums into balances. */
-final class AccountBalanceFactory
+final readonly class AccountBalanceFactory
 {
     /**
      * @param list<array{currency: string, debit: string, credit: string}> $sums

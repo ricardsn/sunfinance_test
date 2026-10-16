@@ -21,6 +21,23 @@ services:
       XDEBUG_MODE: "${XDEBUG_MODE:-debug,develop}"
       PHP_IDE_CONFIG: "serverName=sunfinance"
 
+  # the API docs at :8080/docs, behind nginx so they share the API's origin and
+  # Swagger's "Try it out" needs no CORS setup. Dev only - nothing in the API
+  # depends on it.
+  swagger:
+    image: swaggerapi/swagger-ui:v5.29.1
+    environment:
+      SWAGGER_JSON: /spec/openapi.yaml
+      BASE_URL: /docs
+    volumes:
+      - ./openapi.yaml:/spec/openapi.yaml:ro
+
+  nginx:
+    volumes:
+      - ./docker/nginx/docs.conf:/etc/nginx/extra/docs.conf:ro
+    depends_on:
+      - swagger
+
   worker:
     build:
       target: dev

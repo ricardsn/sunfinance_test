@@ -23,22 +23,6 @@ class ProcessedEvent
     #[ORM\Column(type: Types::BIGINT)]
     private ?int $id = null;
 
-    #[ORM\Column(length: 128)]
-    private readonly string $eventId;
-
-    #[ORM\Column(length: 32, enumType: EventType::class)]
-    private readonly EventType $type;
-
-    /** Minor units (cents). */
-    #[ORM\Column(type: Types::BIGINT)]
-    private readonly int $amount;
-
-    #[ORM\Column(length: 3)]
-    private readonly string $currency;
-
-    #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE)]
-    private readonly \DateTimeImmutable $occurredAt;
-
     #[ORM\Column(length: 16, enumType: EventStatus::class)]
     private EventStatus $status = EventStatus::Pending;
 
@@ -46,17 +30,18 @@ class ProcessedEvent
     private ?\DateTimeImmutable $processedAt = null;
 
     public function __construct(
-        string $eventId,
-        EventType $type,
-        int $amount,
-        string $currency,
-        \DateTimeImmutable $occurredAt,
+        #[ORM\Column(length: 128)]
+        private readonly string $eventId,
+        #[ORM\Column(length: 32, enumType: EventType::class)]
+        private readonly EventType $type,
+        /** Minor units (cents). */
+        #[ORM\Column(type: Types::BIGINT)]
+        private readonly int $amount,
+        #[ORM\Column(length: 3)]
+        private readonly string $currency,
+        #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE)]
+        private readonly \DateTimeImmutable $occurredAt,
     ) {
-        $this->eventId = $eventId;
-        $this->type = $type;
-        $this->amount = $amount;
-        $this->currency = $currency;
-        $this->occurredAt = $occurredAt;
     }
 
     public function getId(): ?int
