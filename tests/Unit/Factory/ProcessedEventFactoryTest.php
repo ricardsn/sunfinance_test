@@ -52,14 +52,16 @@ final class ProcessedEventFactoryTest extends TestCase
         self::assertSame($expected, $event->getAmount());
     }
 
-    /** @return iterable<string, array{string, mixed, int}> */
-    public static function amounts(): iterable
+    /** @return array<string, array{string, mixed, int}> */
+    public static function amounts(): array
     {
-        yield 'EUR decimal string' => ['EUR', '100.50', 10_050];
-        yield 'EUR integer' => ['EUR', 100, 10_000];
-        yield 'EUR float' => ['EUR', 100.5, 10_050];
-        yield 'JPY has no minor unit' => ['JPY', 100, 100];
-        yield 'KWD has three' => ['KWD', '1.234', 1_234];
+        return [
+            'EUR decimal string' => ['EUR', '100.50', 10_050],
+            'EUR integer' => ['EUR', 100, 10_000],
+            'EUR float' => ['EUR', 100.5, 10_050],
+            'JPY has no minor unit' => ['JPY', 100, 100],
+            'KWD has three' => ['KWD', '1.234', 1_234],
+        ];
     }
 
     /** @param array<string, mixed> $overrides */

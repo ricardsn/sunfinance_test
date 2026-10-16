@@ -40,25 +40,27 @@ final class AccountingTransactionFactoryTest extends TestCase
         }
     }
 
-    /** @return iterable<string, array{EventType, AccountName, AccountName}> */
-    public static function pairs(): iterable
+    /** @return array<string, array{EventType, AccountName, AccountName}> */
+    public static function pairs(): array
     {
-        yield 'payment_received: debit user, credit system cash' => [
-            EventType::PaymentReceived,
-            AccountName::UserAccount,
-            AccountName::SystemCashAccount,
-        ];
+        return [
+            'payment_received: debit user, credit system cash' => [
+                EventType::PaymentReceived,
+                AccountName::UserAccount,
+                AccountName::SystemCashAccount,
+            ],
 
-        yield 'payment_sent: debit system cash, credit user' => [
-            EventType::PaymentSent,
-            AccountName::SystemCashAccount,
-            AccountName::UserAccount,
-        ];
+            'payment_sent: debit system cash, credit user' => [
+                EventType::PaymentSent,
+                AccountName::SystemCashAccount,
+                AccountName::UserAccount,
+            ],
 
-        yield 'fee_charged: debit user, credit fee' => [
-            EventType::FeeCharged,
-            AccountName::UserAccount,
-            AccountName::FeeAccount,
+            'fee_charged: debit user, credit fee' => [
+                EventType::FeeCharged,
+                AccountName::UserAccount,
+                AccountName::FeeAccount,
+            ],
         ];
     }
 

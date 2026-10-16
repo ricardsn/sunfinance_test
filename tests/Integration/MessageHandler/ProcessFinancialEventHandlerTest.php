@@ -61,23 +61,25 @@ final class ProcessFinancialEventHandlerTest extends KernelTestCase
         ));
     }
 
-    /** @return iterable<string, array{EventType, list<array{AccountName, Direction}>}> */
-    public static function eventTypes(): iterable
+    /** @return array<string, array{EventType, list<array{AccountName, Direction}>}> */
+    public static function eventTypes(): array
     {
-        yield 'payment_received' => [EventType::PaymentReceived, [
-            [AccountName::UserAccount, Direction::Debit],
-            [AccountName::SystemCashAccount, Direction::Credit],
-        ]];
+        return [
+            'payment_received' => [EventType::PaymentReceived, [
+                [AccountName::UserAccount, Direction::Debit],
+                [AccountName::SystemCashAccount, Direction::Credit],
+            ]],
 
-        yield 'payment_sent' => [EventType::PaymentSent, [
-            [AccountName::SystemCashAccount, Direction::Debit],
-            [AccountName::UserAccount, Direction::Credit],
-        ]];
+            'payment_sent' => [EventType::PaymentSent, [
+                [AccountName::SystemCashAccount, Direction::Debit],
+                [AccountName::UserAccount, Direction::Credit],
+            ]],
 
-        yield 'fee_charged' => [EventType::FeeCharged, [
-            [AccountName::UserAccount, Direction::Debit],
-            [AccountName::FeeAccount, Direction::Credit],
-        ]];
+            'fee_charged' => [EventType::FeeCharged, [
+                [AccountName::UserAccount, Direction::Debit],
+                [AccountName::FeeAccount, Direction::Credit],
+            ]],
+        ];
     }
 
     public function testHandlingTheSameMessageTwiceLeavesOnlyOnePair(): void

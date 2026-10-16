@@ -4,23 +4,22 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Controller;
 
+use App\Tests\Functional\ApiTestCase;
 use Doctrine\DBAL\Connection;
-use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * One test per status code the API can answer with. The transport is sync:// in tests,
  * so an accepted event is already posted by the time the response comes back.
  */
-final class RecordEventControllerTest extends WebTestCase
+final class RecordEventControllerTest extends ApiTestCase
 {
-    private KernelBrowser $client;
     private Connection $connection;
 
     protected function setUp(): void
     {
-        $this->client = self::createClient();
+        parent::setUp();
+
         $this->connection = self::getContainer()->get(Connection::class);
     }
 
@@ -28,25 +27,23 @@ final class RecordEventControllerTest extends WebTestCase
     {
         $this->post($this->payload('evt_http_1'));
 
-        $response = $this->client->getResponse();
-
-        self::assertSame(Response::HTTP_ACCEPTED, $response->getStatusCode());
-        self::assertSame('', $response->getContent());
+        self::assertResponseStatusCodeSame(Response::HTTP_ACCEPTED);
+        self::assertSame('', $this->client->getResponse()->getContent());
         self::assertSame(2, $this->countTransactions('evt_http_1'));
     }
 
     public function testAnInvalidJsonBodyAnswersWith400(): void
     {
-        $this->post('{"event_id":');
+        $this->postRaw('{"event_id":');
 
-        self::assertProblem(Response::HTTP_BAD_REQUEST, $this->client->getResponse());
+        $this->assertProblem(Response::HTTP_BAD_REQUEST);
     }
 
     public function testAnInvalidFieldAnswersWith422AndNamesIt(): void
     {
         $this->post($this->payload('evt_http_2', ['amount' => '0.00']));
 
-        $problem = self::assertProblem(Response::HTTP_UNPROCESSABLE_ENTITY, $this->client->getResponse());
+        $problem = $this->assertProblem(Response::HTTP_UNPROCESSABLE_ENTITY);
 
         self::assertArrayHasKey('amount', $problem['errors']);
     }
@@ -55,7 +52,7 @@ final class RecordEventControllerTest extends WebTestCase
     {
         $this->post($this->payload('evt_http_3', ['type' => 'interest_accrued']));
 
-        $problem = self::assertProblem(Response::HTTP_UNPROCESSABLE_ENTITY, $this->client->getResponse());
+        $problem = $this->assertProblem(Response::HTTP_UNPROCESSABLE_ENTITY);
 
         self::assertArrayHasKey('type', $problem['errors']);
     }
@@ -65,15 +62,15 @@ final class RecordEventControllerTest extends WebTestCase
         $this->post($this->payload('evt_http_4'));
         $this->post($this->payload('evt_http_4'));
 
-        self::assertProblem(Response::HTTP_CONFLICT, $this->client->getResponse());
+        $this->assertProblem(Response::HTTP_CONFLICT);
         self::assertSame(2, $this->countTransactions('evt_http_4'));
     }
 
     public function testANonJsonContentTypeAnswersWith415(): void
     {
-        $this->post($this->payload('evt_http_5'), 'text/plain');
+        $this->postRaw(json_encode($this->payload('evt_http_5'), \JSON_THROW_ON_ERROR), 'text/plain');
 
-        self::assertProblem(Response::HTTP_UNSUPPORTED_MEDIA_TYPE, $this->client->getResponse());
+        $this->assertProblem(Response::HTTP_UNSUPPORTED_MEDIA_TYPE);
     }
 
     public function testADatabaseFailureAnswersWith500AndLeaksNothing(): void
@@ -83,39 +80,46 @@ final class RecordEventControllerTest extends WebTestCase
 
         $this->post($this->payload('evt_http_6'));
 
-        $problem = self::assertProblem(Response::HTTP_INTERNAL_SERVER_ERROR, $this->client->getResponse());
+        $problem = $this->assertProblem(Response::HTTP_INTERNAL_SERVER_ERROR);
 
         self::assertSame('An unexpected error occurred.', $problem['detail']);
     }
 
     /**
      * @param array<string, mixed> $overrides
+     *
+     * @return array<string, mixed>
      */
-    private function payload(string $eventId, array $overrides = []): string
+    private function payload(string $eventId, array $overrides = []): array
     {
-        return json_encode(array_merge([
+        return array_merge([
             'event_id' => $eventId,
             'type' => 'payment_received',
             'amount' => '100.50',
             'currency' => 'EUR',
             'timestamp' => '2026-01-01T00:00:00Z',
-        ], $overrides), \JSON_THROW_ON_ERROR);
+        ], $overrides);
     }
 
-    private function post(string $body, string $contentType = 'application/json'): void
+    /** @param array<string, mixed> $payload */
+    private function post(array $payload): void
+    {
+        $this->client->jsonRequest('POST', '/events', $payload);
+    }
+
+    /** For the bodies jsonRequest() cannot send: broken JSON, or another content type. */
+    private function postRaw(string $body, string $contentType = 'application/json'): void
     {
         $this->client->request('POST', '/events', server: ['CONTENT_TYPE' => $contentType], content: $body);
     }
 
-    /**
-     * @return array<string, mixed> the decoded problem document
-     */
-    private static function assertProblem(int $status, Response $response): array
+    /** @return array<string, mixed> the decoded problem document */
+    private function assertProblem(int $status): array
     {
-        self::assertSame($status, $response->getStatusCode());
-        self::assertSame('application/problem+json', $response->headers->get('Content-Type'));
+        self::assertResponseStatusCodeSame($status);
+        self::assertResponseHeaderSame('Content-Type', 'application/problem+json');
 
-        $problem = json_decode((string) $response->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        $problem = json_decode((string) $this->client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
 
         self::assertIsArray($problem);
         self::assertSame($status, $problem['status']);

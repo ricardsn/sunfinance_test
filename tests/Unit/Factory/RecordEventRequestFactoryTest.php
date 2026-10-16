@@ -41,16 +41,18 @@ final class RecordEventRequestFactoryTest extends TestCase
         self::assertSame($expected, $this->factory->create(self::json($overrides))->amountInMinorUnits());
     }
 
-    /** @return iterable<string, array{array<string, mixed>, int}> */
-    public static function amounts(): iterable
+    /** @return array<string, array{array<string, mixed>, int}> */
+    public static function amounts(): array
     {
-        // the number formats themselves are covered by DecimalAmountTest; these check
-        // that the exponent comes from the currency
-        yield 'two decimals' => [['amount' => 100.50], 10050];
-        yield 'integer' => [['amount' => 100], 10000];
-        yield 'decimal string' => [['amount' => '100.00'], 10000];
-        yield 'currency without decimals' => [['amount' => 100, 'currency' => 'JPY'], 100];
-        yield 'currency with three decimals' => [['amount' => 1.234, 'currency' => 'KWD'], 1234];
+        return [
+            // the number formats themselves are covered by DecimalAmountTest; these check
+            // that the exponent comes from the currency
+            'two decimals' => [['amount' => 100.50], 10050],
+            'integer' => [['amount' => 100], 10000],
+            'decimal string' => [['amount' => '100.00'], 10000],
+            'currency without decimals' => [['amount' => 100, 'currency' => 'JPY'], 100],
+            'currency with three decimals' => [['amount' => 1.234, 'currency' => 'KWD'], 1234],
+        ];
     }
 
     #[DataProvider('invalidJson')]
@@ -61,16 +63,18 @@ final class RecordEventRequestFactoryTest extends TestCase
         $this->factory->create($body);
     }
 
-    /** @return iterable<string, array{string}> */
-    public static function invalidJson(): iterable
+    /** @return array<string, array{string}> */
+    public static function invalidJson(): array
     {
-        yield 'empty body' => [''];
-        yield 'truncated object' => ['{"event_id": "evt_123"'];
-        yield 'single quotes' => ["{'event_id': 'evt_123'}"];
-        yield 'trailing comma' => ['{"event_id": "evt_123",}'];
-        yield 'json array' => ['[{"event_id": "evt_123"}]'];
-        yield 'json scalar' => ['"evt_123"'];
-        yield 'json null' => ['null'];
+        return [
+            'empty body' => [''],
+            'truncated object' => ['{"event_id": "evt_123"'],
+            'single quotes' => ["{'event_id': 'evt_123'}"],
+            'trailing comma' => ['{"event_id": "evt_123",}'],
+            'json array' => ['[{"event_id": "evt_123"}]'],
+            'json scalar' => ['"evt_123"'],
+            'json null' => ['null'],
+        ];
     }
 
     /**
@@ -91,48 +95,50 @@ final class RecordEventRequestFactoryTest extends TestCase
         }
     }
 
-    /** @return iterable<string, array{array<string, mixed>, string}> */
-    public static function invalidFields(): iterable
+    /** @return array<string, array{array<string, mixed>, string}> */
+    public static function invalidFields(): array
     {
-        yield 'event_id missing' => [['event_id' => null], 'event_id'];
-        yield 'event_id empty' => [['event_id' => ''], 'event_id'];
-        yield 'event_id blank' => [['event_id' => '   '], 'event_id'];
-        yield 'event_id too long' => [['event_id' => str_repeat('e', 129)], 'event_id'];
-        yield 'event_id not a string' => [['event_id' => 42], 'event_id'];
-        yield 'event_id an object' => [['event_id' => ['evt_123']], 'event_id'];
+        return [
+            'event_id missing' => [['event_id' => null], 'event_id'],
+            'event_id empty' => [['event_id' => ''], 'event_id'],
+            'event_id blank' => [['event_id' => '   '], 'event_id'],
+            'event_id too long' => [['event_id' => str_repeat('e', 129)], 'event_id'],
+            'event_id not a string' => [['event_id' => 42], 'event_id'],
+            'event_id an object' => [['event_id' => ['evt_123']], 'event_id'],
 
-        yield 'type missing' => [['type' => null], 'type'];
-        yield 'type empty' => [['type' => ''], 'type'];
-        yield 'type unknown' => [['type' => 'payment_refunded'], 'type'];
-        yield 'type wrong case' => [['type' => 'PAYMENT_RECEIVED'], 'type'];
-        yield 'type not a string' => [['type' => 1], 'type'];
+            'type missing' => [['type' => null], 'type'],
+            'type empty' => [['type' => ''], 'type'],
+            'type unknown' => [['type' => 'payment_refunded'], 'type'],
+            'type wrong case' => [['type' => 'PAYMENT_RECEIVED'], 'type'],
+            'type not a string' => [['type' => 1], 'type'],
 
-        yield 'amount missing' => [['amount' => null], 'amount'];
-        yield 'amount zero' => [['amount' => 0], 'amount'];
-        yield 'amount zero with decimals' => [['amount' => 0.00], 'amount'];
-        yield 'amount negative' => [['amount' => -100.00], 'amount'];
-        yield 'amount not a number' => [['amount' => 'one hundred'], 'amount'];
-        yield 'amount in exponent notation' => [['amount' => '1e3'], 'amount'];
-        yield 'amount an object' => [['amount' => ['value' => 100]], 'amount'];
-        yield 'amount too precise for the currency' => [['amount' => 100.001], 'amount'];
-        yield 'amount with decimals in a currency without them' => [['amount' => 100.5, 'currency' => 'JPY'], 'amount'];
+            'amount missing' => [['amount' => null], 'amount'],
+            'amount zero' => [['amount' => 0], 'amount'],
+            'amount zero with decimals' => [['amount' => 0.00], 'amount'],
+            'amount negative' => [['amount' => -100.00], 'amount'],
+            'amount not a number' => [['amount' => 'one hundred'], 'amount'],
+            'amount in exponent notation' => [['amount' => '1e3'], 'amount'],
+            'amount an object' => [['amount' => ['value' => 100]], 'amount'],
+            'amount too precise for the currency' => [['amount' => 100.001], 'amount'],
+            'amount with decimals in a currency without them' => [['amount' => 100.5, 'currency' => 'JPY'], 'amount'],
 
-        yield 'currency missing' => [['currency' => null], 'currency'];
-        yield 'currency empty' => [['currency' => ''], 'currency'];
-        yield 'currency too short' => [['currency' => 'EU'], 'currency'];
-        yield 'currency too long' => [['currency' => 'EURO'], 'currency'];
-        yield 'currency unknown code' => [['currency' => 'XYZ'], 'currency'];
-        yield 'currency lowercase' => [['currency' => 'eur'], 'currency'];
-        yield 'currency not a string' => [['currency' => 978], 'currency'];
+            'currency missing' => [['currency' => null], 'currency'],
+            'currency empty' => [['currency' => ''], 'currency'],
+            'currency too short' => [['currency' => 'EU'], 'currency'],
+            'currency too long' => [['currency' => 'EURO'], 'currency'],
+            'currency unknown code' => [['currency' => 'XYZ'], 'currency'],
+            'currency lowercase' => [['currency' => 'eur'], 'currency'],
+            'currency not a string' => [['currency' => 978], 'currency'],
 
-        yield 'timestamp missing' => [['timestamp' => null], 'timestamp'];
-        yield 'timestamp empty' => [['timestamp' => ''], 'timestamp'];
-        yield 'timestamp not a date' => [['timestamp' => 'yesterday'], 'timestamp'];
-        yield 'timestamp date only' => [['timestamp' => '2026-01-01'], 'timestamp'];
-        yield 'timestamp without a zone' => [['timestamp' => '2026-01-01T00:00:00'], 'timestamp'];
-        yield 'timestamp with an impossible date' => [['timestamp' => '2026-02-30T00:00:00Z'], 'timestamp'];
-        yield 'timestamp with an impossible month' => [['timestamp' => '2026-13-01T00:00:00Z'], 'timestamp'];
-        yield 'timestamp as a unix time' => [['timestamp' => 1767225600], 'timestamp'];
+            'timestamp missing' => [['timestamp' => null], 'timestamp'],
+            'timestamp empty' => [['timestamp' => ''], 'timestamp'],
+            'timestamp not a date' => [['timestamp' => 'yesterday'], 'timestamp'],
+            'timestamp date only' => [['timestamp' => '2026-01-01'], 'timestamp'],
+            'timestamp without a zone' => [['timestamp' => '2026-01-01T00:00:00'], 'timestamp'],
+            'timestamp with an impossible date' => [['timestamp' => '2026-02-30T00:00:00Z'], 'timestamp'],
+            'timestamp with an impossible month' => [['timestamp' => '2026-13-01T00:00:00Z'], 'timestamp'],
+            'timestamp as a unix time' => [['timestamp' => 1767225600], 'timestamp'],
+        ];
     }
 
     public function testEveryInvalidFieldIsReported(): void
@@ -156,13 +162,15 @@ final class RecordEventRequestFactoryTest extends TestCase
         self::assertSame($expected, $request->occurredAt()->format(\DATE_ATOM));
     }
 
-    /** @return iterable<string, array{string, string}> */
-    public static function acceptedTimestamps(): iterable
+    /** @return array<string, array{string, string}> */
+    public static function acceptedTimestamps(): array
     {
-        yield 'zulu' => ['2026-01-01T00:00:00Z', '2026-01-01T00:00:00+00:00'];
-        yield 'offset' => ['2026-01-01T03:00:00+03:00', '2026-01-01T03:00:00+03:00'];
-        yield 'fractional seconds' => ['2026-01-01T00:00:00.123Z', '2026-01-01T00:00:00+00:00'];
-        yield 'leap day' => ['2028-02-29T12:00:00Z', '2028-02-29T12:00:00+00:00'];
+        return [
+            'zulu' => ['2026-01-01T00:00:00Z', '2026-01-01T00:00:00+00:00'],
+            'offset' => ['2026-01-01T03:00:00+03:00', '2026-01-01T03:00:00+03:00'],
+            'fractional seconds' => ['2026-01-01T00:00:00.123Z', '2026-01-01T00:00:00+00:00'],
+            'leap day' => ['2028-02-29T12:00:00Z', '2028-02-29T12:00:00+00:00'],
+        ];
     }
 
     /** @param array<string, mixed> $overrides */
